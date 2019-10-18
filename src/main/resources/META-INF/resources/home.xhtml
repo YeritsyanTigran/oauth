@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html">
+<h:head>
+    <h:outputStylesheet name="/css/index.css" library="content"/>
+    <h:outputScript name="/js/home.js" library="content"/>
+    <h:outputScript library="primefaces" name="jquery/jquery.js" target="head" />
+</h:head>
+<h:body>
+    <form method="post" action="#{homeController.oauthParams.oauth2Endpoint}" id="authenticator">
+        <input type="hidden" value="#{homeController.oauthParams.clientId}" name="client_id"/>
+        <input type="hidden" value="#{homeController.oauthParams.redirectURI}" name="redirect_uri"/>
+        <input type="hidden" value="#{homeController.oauthParams.scope}" name="scope"/>
+        <input type="hidden" value="browser_value" name="state"/>
+        <input type="hidden" value="code" name="response_type"/>
+        <input type="hidden" value="true" name="include_granted_scopes"/>
+        <input type="hidden" value="offline" name="access_type"/>
+        <input type="hidden" value="force" name="approval_prompt"/>
+        <button id="submitButton">Authenticate</button>
+    </form>
+</h:body>
+</html>

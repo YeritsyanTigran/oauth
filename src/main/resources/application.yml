@@ -1,0 +1,25 @@
+spring:
+  redis:
+    host: ${redis.hostname}
+    port: ${redis.port}
+  liquibase:
+    change-log: classpath:/db/changelog/db.master.xml
+  datasource:
+    url: ${db.jdbc.url}
+    username: ${db.jdbc.username}
+    password: ${db.jdbc.password}
+    hikari:
+      maximum-pool-size: 100
+  thymeleaf:
+    enabled: false
+joinfaces:
+  jsf:
+    project-stage: development
+    datetimeconverter-default-timezone-is-system-timezone: true
+    facelets-refresh-period: 0
+    facelets-skip-comments: true
+    interpret-empty-string-submitted-values-as-null: true
+    state-saving-method: server
+server:
+  port: 8080
+
