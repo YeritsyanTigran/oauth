@@ -1,10 +1,10 @@
 package com.TigranCorporations.oauth2.core.utility;
 
-import com.TigranCorporations.oauth2.configuration.OauthParams;
-import com.TigranCorporations.oauth2.controller.model.Payload;
+import com.TigranCorporations.oauth2.controller.model.AccessToken;
 import com.TigranCorporations.oauth2.controller.model.TokenResponse;
+import com.TigranCorporations.oauth2.core.domain.dto.UserDto;
 import com.TigranCorporations.oauth2.core.ex.TokenException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.TigranCorporations.oauth2.core.service.UserService;
 import org.redisson.api.RMapCache;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,13 +12,12 @@ import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+
 @Component
 public class OauthHelper {
-    public static final String REFRESH_TOKEN_CACHE = "REFRESH_TOKEN";
+    public static final String ACCESS_TOKEN_CACHE = "ACCESS_TOKEN";
 
     @Autowired
     private OauthParams oauthParams;
@@ -26,10 +25,10 @@ public class OauthHelper {
     @Autowired
     private RedissonClient redissonClient;
 
-    public Payload getCredentials(String code) throws IOException, TokenException {
-        URL url = new URL(oauthParams.getTokenEndpoint());
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    @Autowired
+    private UserService userService;
 
+    public UserDto getCredentials(String code) throws IOException, TokenException {
         Map<String,String> params = new HashMap<>();
         params.put("client_secret",oauthParams.getSecret());
         params.put("client_id",oauthParams.getClientId());
@@ -37,60 +36,65 @@ public class OauthHelper {
         params.put("redirect_uri",oauthParams.getRedirectURI());
         params.put("grant_type","authorization_code");
 
-        writeParamsToUrl(params,connection);
-        TokenResponse response = getOutput(connection);
+        HttpURLConnection connection = HttpUrlConnectionHelper.constructConnection(oauthParams.getTokenEndpoint(),params);
+        TokenResponse tokenResponse = HttpUrlConnectionHelper.getTokenResponse(connection);
 
-        RMapCache<String,String> refreshTokenCache = redissonClient.getMapCache(REFRESH_TOKEN_CACHE);
-        Payload payload =  getPayload(response.getTokenId());
-        if(response.getRefreshToken()!=null) {
-            refreshTokenCache.computeIfAbsent(payload.getSub(),k-> response.getRefreshToken());
+        RMapCache<String,AccessToken> accessTokenMap = redissonClient.getMapCache(ACCESS_TOKEN_CACHE);
+        UserDto user =  getUserWithToken(tokenResponse.getAccessToken());
+        user.setRefreshToken(tokenResponse.getRefreshToken());
+
+        if(tokenResponse.getAccessToken() == null){
+            throw new TokenException("No access token");
         }
-        return payload;
+        if(tokenResponse.getRefreshToken()!=null){
+            userService.save(user);
+        }
+        AccessToken accessToken = new AccessToken(tokenResponse.getAccessToken(),tokenResponse.getExpiresIn());
+        accessTokenMap.put(user.getAccountId(),accessToken);
+
+        return user;
     }
 
-    public Payload refreshTokenId(String sub) throws TokenException, IOException {
-        Object refreshToken = redissonClient.getMapCache(REFRESH_TOKEN_CACHE).get(sub);
-        if(refreshToken == null){
+    public UserDto getUser(String accountId) throws TokenException, IOException {
+        RMapCache<String,AccessToken> accessTokenMap =  redissonClient.getMapCache(ACCESS_TOKEN_CACHE);
+        AccessToken accessToken = accessTokenMap.get(accountId);
+        if(accessToken == null){
+            throw new TokenException("No Access Token");
+        }
+        if(System.currentTimeMillis() > accessToken.getExpiresIn()){
+            return getUserWithToken(refreshAccessToken(accountId));
+        }
+        return getUserWithToken(accessToken.getToken());
+    }
+
+    public String refreshAccessToken(String accountId) throws TokenException, IOException {
+        UserDto user = userService.getUserByAccountIdAndType(accountId,oauthParams.getType());
+        if(user == null || user.getRefreshToken() == null){
             throw new TokenException("No refresh token available");
         }
-        URL url = new URL(oauthParams.getRefreshEndpoint());
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+        AccessToken accessToken = getAccessToken(user.getRefreshToken());
+        redissonClient.getMapCache(ACCESS_TOKEN_CACHE).put(accountId,accessToken);
+        return accessToken.getToken();
+    }
+
+    public AccessToken getAccessToken(String refreshToken) throws IOException {
         Map<String,String> params = new HashMap<>();
         params.put("client_id",oauthParams.getClientId());
         params.put("client_secret",oauthParams.getSecret());
-        params.put("refresh_token",refreshToken.toString());
+        params.put("refresh_token",refreshToken);
         params.put("grant_type","refresh_token");
 
-        writeParamsToUrl(params,connection);
-        TokenResponse response = getOutput(connection);
-        return getPayload(response.getTokenId());
-
+        HttpURLConnection connection = HttpUrlConnectionHelper.constructConnection(oauthParams.getRefreshEndpoint(),params);
+        TokenResponse tokenResponse = HttpUrlConnectionHelper.getTokenResponse(connection);
+        return new AccessToken(tokenResponse.getAccessToken(),tokenResponse.getExpiresIn());
     }
 
-    public static TokenResponse getOutput(HttpURLConnection connection) throws IOException {
-        BufferedReader in = new BufferedReader(
-                new InputStreamReader(connection.getInputStream()));
-        StringBuilder content = new StringBuilder();
-        String inputLine;
-        while((inputLine = in.readLine())!=null){
-            content.append(inputLine);
-        }
-        in.close();
-        return new ObjectMapper().readValue(content.toString(), TokenResponse.class);
-    }
-
-    public static void writeParamsToUrl(Map<String,String> params,HttpURLConnection connection) throws IOException {
-        connection.setDoOutput(true);
-        DataOutputStream out = new DataOutputStream(connection.getOutputStream());
-        out.writeBytes(ParametrStringBuilder.getParamsString(params));
-        out.flush();
-        out.close();
-    }
-
-    public Payload getPayload(String tokenId) throws IOException{
-        String[] parts = tokenId.split("\\.");
-        Payload payload =  new ObjectMapper().readValue(new String(Base64.getDecoder().decode(parts[1])), Payload.class);
-        payload.setTokenId(tokenId);
-        return payload;
+    public UserDto getUserWithToken(String accessToken) throws IOException{
+        HttpURLConnection connection = HttpUrlConnectionHelper
+                .constructConnection(oauthParams.getUserInfoEndpoint(),accessToken);
+        UserDto user =  HttpUrlConnectionHelper.getUserResponse(connection);
+        user.setType(oauthParams.getType());
+        return user;
     }
 }

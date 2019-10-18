@@ -2,9 +2,24 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9 http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
-    <changeSet id="1" author="Tigran">
-        <createTable tableName="Test">
-            <column name="test" type="VARCHAR(255)"></column>
+    <changeSet id="10/18/2019" author="Tigran">
+        <createTable tableName="user">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="account_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="refresh_token" type="VARCHAR(255)"/>
         </createTable>
+        <createIndex tableName="user" indexName="user_account_id_type_index">
+            <column name="account_id" type="VARCHAR(255)"/>
+            <column name="type" type="VARCHAR(255)"/>
+        </createIndex>
     </changeSet>
+
 </databaseChangeLog>

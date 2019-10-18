@@ -1,10 +1,10 @@
 var urlParams = new URLSearchParams(window.location.search);
 
 var code = urlParams.get("code");
-var tokenId = localStorage.getItem("tokenId");
+var id = localStorage.getItem("id");
 if(code !=null){
     console.log("Started");
-    localStorage.removeItem("tokenId");
+    localStorage.removeItem("id");
     $.ajax({
         url:"/api/v1/code",
         method:"POST",
@@ -13,7 +13,7 @@ if(code !=null){
         },
         success:function(response){
             console.log(response);
-            localStorage.setItem("tokenId",response);
+            localStorage.setItem("id",response);
             location.replace("/home");
         },
         error:function(){
@@ -24,61 +24,33 @@ if(code !=null){
 
 var div = document.createElement("div");
 div["id"] = "profileInfo";
-var profileSub = document.createElement("H1");
-profileSub["id"] = "profileSub";
+var profileName = document.createElement("H1");
+profileName["id"] = "profileName";
 
 
-if(tokenId!=null){
+if(id!=null){
     $.ajax({
-        url:"/api/v1/tokenId",
-        method:"POST",
+        url:"/api/v1/user",
+        method:"GET",
         data:{
-            tokenId:tokenId
+            id:id
         },
         success:function(response){
-            var appendedSub = document.getElementById("profileSub");
-            if(appendedSub == null) {
-                profileSub.innerText = "Your Sub Is: " + response.sub;
-                div.appendChild(profileSub);
+            var appendedName = document.getElementById("profileName");
+            console.log(response);
+            if(appendedName == null) {
+                profileName.innerText = "Your Name Is: " + response;
+                div.appendChild(profileName);
                 document.body.appendChild(div);
             }else{
-                appendedSub.innerText = "Your Sub Is: " +  response.sub;
+                appendedName.innerText = "Your Name Is: " +  response;
             }
         },
-        error:function(error){
-            if(error.status == 403){
-                refresh(tokenId);
-            }
+        error:function(error) {
+            localStorage.removeItem("id");
+            console.log("Error occurred");
         }
-    })
-
-
-    function refresh(tokenId){
-        $.ajax({
-            url:"/api/v1/code/refresh",
-            method:"POST",
-            data:{
-                tokenId:tokenId,
-            },
-            success:function(response){
-                localStorage.setItem("tokenId",response.tokenId);
-                var appended = document.getElementById("profileInfo");
-                if(appended == null){
-                    profileSub.innerText = "Your Sub Is: " +  response.sub;
-                    div.appendChild(profileSub);
-                    document.body.appendChild(div);
-                }else{
-                    var appendedSub = document.getElementById("profileSub");
-                    appendedSub.innerText = response.sub;
-                }
-
-            },
-            error:function(error){
-              alert("Couldn't retrieve refresh token.Clearing the local storage");
-              localStorage.removeItem("tokenId");
-            }
-        });
-    }
+    });
 
 
 }

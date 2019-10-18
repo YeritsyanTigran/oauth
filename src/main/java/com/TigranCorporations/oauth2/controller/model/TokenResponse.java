@@ -1,16 +1,13 @@
 package com.TigranCorporations.oauth2.controller.model;
 
-import com.TigranCorporations.oauth2.core.deserializers.GoogleTokenResponseDeserializer;
+import com.TigranCorporations.oauth2.core.deserializers.TokenResponseDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
 
 @Data
-@JsonDeserialize(using = GoogleTokenResponseDeserializer.class)
+@JsonDeserialize(using = TokenResponseDeserializer.class)
 public class TokenResponse {
     private String accessToken;
-    private String tokenId;
     private String refreshToken;
-    private Integer expiresIn;
-    private String scope;
-    private String tokenType;
+    private Long expiresIn;
 }

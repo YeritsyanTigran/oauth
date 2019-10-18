@@ -11,14 +11,6 @@ body{
     top: 45%;
 }
 
-#profileSub{
-    position: absolute;
-    display: inline-block;
-    left: 35%;
-    top: 50%;
-    text-align: center;
-}
-
 #submitButton{
     display:inline-block;
     padding:0.7em 1.4em;
@@ -34,4 +26,12 @@ body{
     text-align:center;
     position:relative;
     border-color: #3369ff;
+}
+
+#profileInfo{
+    position: absolute;
+    display: inline-block;
+    left: 35%;
+    top: 50%;
+    text-align: center;
 }

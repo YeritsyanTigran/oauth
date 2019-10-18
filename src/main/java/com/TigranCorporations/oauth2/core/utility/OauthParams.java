@@ -1,4 +1,4 @@
-package com.TigranCorporations.oauth2.configuration;
+package com.TigranCorporations.oauth2.core.utility;
 
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,8 +16,12 @@ public class OauthParams {
     @Value("${scope}")
     private String scope;
 
+
     @Value("${secret}")
     private String secret;
+
+    @Value("${oauth2.type}")
+    private String type;
 
     @Value("${oauth2.endpoint}")
     private String oauth2Endpoint;
@@ -28,10 +32,10 @@ public class OauthParams {
     @Value("${oauth2.refresh.endpoint}")
     private String refreshEndpoint;
 
+    @Value("${user.info.endpoint}")
+    private String userInfoEndpoint;
+
     @Value("${test.refreshToken}")
     private String testRefreshToken;
-
-    @Value("${test.tokenId}")
-    private String testTokenId;
 
 }
